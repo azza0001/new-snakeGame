@@ -4,6 +4,7 @@ const scoreElement = document.getElementById("scoreValue");
 const questionElement = document.getElementById("mathQuestion");
 const wrongAnswerElement = document.getElementById("wrongAnswer");
 const startMenu = document.getElementById("startMenu");
+startMenu.style.display = "block";
 const deathScreen = document.getElementById("deathScreen");
 const finalScoreElement = document.getElementById("finalScore");
 const startButton = document.getElementById("startButton");
