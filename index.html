@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Snake Game</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="menu" id="startMenu">
+    <h1>Basic Arithmetic Snake Game (v1.2.1)</h1>
+    <button id="startButton">Start Game</button>
+  </div>
+
+  <div class="death-screen" id="deathScreen">
+    <h1>Game Over!</h1>
+    <p>Your score: <span id="finalScore">0</span></p>
+    <button id="restartButton">Restart</button>
+  </div>
+
+  <div class="game-info">
+    <div class="question" id="mathQuestion">2 + 2 = 22</div>
+    <div class="score">Score: <span id="scoreValue">0</span></div>
+    <div class="wrong-answer" id="wrongAnswer"></div>
+  </div>
+
+  <div class="controls">
+    <h1>Use WASD to move the snake.</h1>
+    <img src="controls_ui/W.png" alt="W key" class="control-key up-key">
+    <div class="middle-row">
+      <img src="controls_ui/A.png" alt="A key" class="control-key left-key">
+      <img src="controls_ui/S.png" alt="S key" class="control-key down-key">
+      <img src="controls_ui/D.png" alt="D key" class="control-key right-key">
+    </div>
+  </div>
+
+  <canvas width="400" height="400" id="game"></canvas>
+  <script src="/main.js"></script>
+</body>
+</html>
