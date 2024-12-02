@@ -5,7 +5,7 @@ Made with:
 [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=000)](#)
 
 # Demo
-* [DEMO](https://azza0001.github.io/new-snakeGame/)
+* (https://azza0001.github.io/new-snakeGame/)
 
 # Basic Arithmetic Skills | Snake Game Edition
 
