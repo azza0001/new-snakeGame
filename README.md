@@ -4,6 +4,9 @@ Made with:
 [![CSS](https://img.shields.io/badge/CSS-1572B6?logo=css3&logoColor=fff)](#)
 [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=000)](#)
 
+# Demo
+* [DEMO](https://azza0001.github.io/new-snakeGame/)
+
 # Basic Arithmetic Skills | Snake Game Edition
 
 ## Description
