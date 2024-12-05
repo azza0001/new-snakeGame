@@ -245,34 +245,6 @@ function createAnswers() {
   });
 }
 
-class TextEffect {
-  constructor(text, x, y) {
-    this.text = text;
-    this.x = x;
-    this.y = y - GRID; // Offset above the snake's head
-    this.alpha = 1.0; // Start fully opaque
-    this.dy = -1; // Move up slightly each frame
-  }
-
-  update() {
-    this.y += this.dy; // Move text upwards
-    this.alpha -= 0.05; // Gradually reduce opacity
-  }
-
-  draw() {
-    context.globalAlpha = this.alpha; // Apply transparency
-    context.fillStyle = "yellow";
-    context.font = "14px Arial";
-    context.textAlign = "center";
-    context.fillText(this.text, this.x, this.y);
-    context.globalAlpha = 1.0; // Reset transparency
-  }
-
-  isVisible() {
-    return this.alpha > 0; // Keep showing until invisible
-  }
-}
-
 let textEffects = []; // Array to hold active text effects
 
 function checkAnswerCollision() {
