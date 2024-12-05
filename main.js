@@ -10,24 +10,29 @@ const finalScoreElement = document.getElementById("finalScore");
 const startButton = document.getElementById("startButton");
 const restartButton = document.getElementById("restartButton");
 
-const GRID = 16;
-const GAME_SPEED = 100;
+const GRID = 24;
+const GAME_SPEED = 120;
 const SCORE_INCREMENT = 1;
-const ROUND_TIME = 6000; // 6 seconds in milliseconds
+const ROUND_TIME = 7000; // 6 seconds in milliseconds
 
-let gameLoop;
-let roundTimer;
-let timeLeft;
+// Set canvas size to be divisible by grid size
+canvas.width = 576; // 24 * 24 grid cells
+canvas.height = 576; // 24 * 24 grid cells
 
 // Classes and Constructors //
 
 class MathProblem {
-  constructor() {
+  constructor(snake) {
+    this.snake = snake;
     this.operators = ["+", "-", "*"];
-    this.generateNewProblem();
   }
 
   generateNewProblem() {
+    // Clear existing timer first
+    if (this.snake.roundTimer) {
+      clearInterval(this.snake.roundTimer);
+    }
+
     const score = parseInt(scoreElement.textContent);
     const maxNum = Math.min(12, Math.max(5, Math.floor(score / 50) + 5));
     this.num1 = Math.floor(Math.random() * maxNum) + 1;
@@ -52,16 +57,16 @@ class MathProblem {
     this.shuffleAnswers();
 
     questionElement.textContent = `${this.num1} ${this.operator} ${this.num2} = ?`;
+    questionElement.style.fontSize = '36px';
     
-    // Reset and start timer for new problem
-    clearInterval(roundTimer);
-    timeLeft = ROUND_TIME;
-    roundTimer = setInterval(() => {
-      timeLeft -= 100;
-      if (timeLeft <= 0) {
-        clearInterval(roundTimer);
-        snake.gameOver();
-      }
+    // Start the timer immediately after generating a new problem
+    this.snake.timeLeft = ROUND_TIME;
+    this.snake.roundTimer = setInterval(() => {
+        this.snake.timeLeft -= 100;
+        if (this.snake.timeLeft <= 0) {
+            clearInterval(this.snake.roundTimer);
+            this.snake.gameOver("Time's up!");
+        }
     }, 100);
   }
 
@@ -87,6 +92,15 @@ class MathProblem {
       ];
     }
   }
+
+  getCurrentProblem() {
+    return {
+      num1: this.num1,
+      num2: this.num2,
+      operator: this.operator,
+      answer: this.answer
+    };
+  }
 }
 
 class Answer {
@@ -101,10 +115,42 @@ class Answer {
     context.fillStyle = "#cc4f4f";
     context.fillRect(this.x, this.y, GRID, GRID);
     context.fillStyle = "white";
-    context.font = "14px Times New Roman";
+    context.font = "20px Times New Roman";
     context.textAlign = "center";
     context.textBaseline = "middle";
     context.fillText(this.value, this.x + GRID / 2, this.y + GRID / 2);
+  }
+}
+
+// Add these new classes after your existing classes
+class Particle {
+  constructor(x, y, color) {
+    this.x = x;
+    this.y = y;
+    this.color = color;
+    this.size = Math.random() * 3 + 2;
+    this.speedX = (Math.random() - 0.5) * 4;
+    this.speedY = (Math.random() - 0.5) * 4;
+    this.alpha = 1;
+  }
+
+  update() {
+    this.x += this.speedX;
+    this.y += this.speedY;
+    this.alpha -= 0.02;
+    this.size = Math.max(0, this.size - 0.1);
+  }
+
+  draw() {
+    if (this.size > 0) {
+      context.save();
+      context.globalAlpha = this.alpha;
+      context.fillStyle = this.color;
+      context.beginPath();
+      context.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      context.fill();
+      context.restore();
+    }
   }
 }
 
@@ -113,12 +159,36 @@ class Snake {
   // Constructor to initialize the Snake object
   constructor() {
     this.reset(); // Reset the snake's properties
+    // Initialize statistics-related properties
+    this.averageResponseTime = [];
+    this.currentStreak = 0;
+    this.totalCorrect = 0;
+    this.totalWrong = 0;
+    this.gameStats = {
+      totalProblems: 0,
+      correctAnswers: 0,
+      wrongAnswers: 0,
+      averageResponseTime: 0,
+      longestStreak: 0,
+      accuracyRate: 0,
+      timeEfficiency: 0,
+      problemDifficulty: [],
+      responseTimesByDifficulty: {},
+      scoresByOperator: {
+        '+': [],
+        '-': [],
+        '*': []
+      }
+    };
+    this.particles = [];
+    this.glowIntensity = 0;
+    this.glowIncreasing = true;
   }
 
   // Method to reset the snake's position and properties
   reset() {
-    this.x = 160; // Initial x position`
-    this.y = 160; // Initial y position
+    this.x = 12 * GRID; // Initial x position at center
+    this.y = 12 * GRID; // Initial y position at center
     this.cells = []; // Array to hold the snake's body segments
     this.maxCells = 4; // Maximum number of cells in the snake
     this.score = 0; // Initial score
@@ -127,6 +197,31 @@ class Snake {
     this.dx = GRID; // Change in x (horizontal movement)
     this.dy = 0; // Change in y (vertical movement)
     scoreElement.textContent = this.score; // Update the score display
+
+    // Reset statistics
+    this.averageResponseTime = [];
+    this.currentStreak = 0;
+    this.totalCorrect = 0;
+    this.totalWrong = 0;
+    this.gameStats = {
+      totalProblems: 0,
+      correctAnswers: 0,
+      wrongAnswers: 0,
+      averageResponseTime: 0,
+      longestStreak: 0,
+      accuracyRate: 0,
+      timeEfficiency: 0,
+      problemDifficulty: [],
+      responseTimesByDifficulty: {},
+      scoresByOperator: {
+        '+': [],
+        '-': [],
+        '*': []
+      }
+    };
+    this.gameLoop = null;
+    this.roundTimer = null;
+    this.timeLeft = ROUND_TIME;
   }
 
   // Method to update the snake's direction based on user input
@@ -165,7 +260,7 @@ class Snake {
       this.y < 0 ||
       this.y >= canvas.height
     ) {
-      this.gameOver(); // Trigger game over if collision occurs
+      this.gameOver("Wall Collision"); // Trigger game over with reason
       return; // Exit the method
     }
 
@@ -193,28 +288,289 @@ class Snake {
 
   // Method to draw the snake on the canvas
   draw() {
-    context.fillStyle = "green"; // Set the color for the snake
-    this.cells.forEach((cell) => {
-      context.fillRect(cell.x, cell.y, GRID - 1, GRID - 1); // Draw each segment
+    // Draw glow effect
+    const gradient = context.createRadialGradient(
+      this.x + GRID/2, this.y + GRID/2, 0,
+      this.x + GRID/2, this.y + GRID/2, GRID
+    );
+    
+    // Pulsating glow effect
+    if (this.glowIncreasing) {
+      this.glowIntensity += 0.05;
+      if (this.glowIntensity >= 1) this.glowIncreasing = false;
+    } else {
+      this.glowIntensity -= 0.05;
+      if (this.glowIntensity <= 0.3) this.glowIncreasing = true;
+    }
+
+    gradient.addColorStop(0, `rgba(76, 175, 80, ${this.glowIntensity * 0.5})`);
+    gradient.addColorStop(1, 'rgba(76, 175, 80, 0)');
+
+    // Draw particles
+    this.particles.forEach((particle, index) => {
+      particle.update();
+      particle.draw();
+      if (particle.alpha <= 0 || particle.size <= 0) {
+        this.particles.splice(index, 1);
+      }
+    });
+
+    // Draw snake segments with gradient effect
+    this.cells.forEach((cell, index) => {
+      // Head of the snake
+      if (index === 0) {
+        context.fillStyle = '#2E7D32';
+      } 
+      // Body segments with gradient
+      else {
+        const gradientIntensity = 1 - (index / this.cells.length);
+        context.fillStyle = `rgb(${46 + 30 * gradientIntensity}, ${125 + 30 * gradientIntensity}, ${50 + 30 * gradientIntensity})`;
+      }
+      
+      // Draw segment with rounded corners
+      context.beginPath();
+      context.roundRect(cell.x, cell.y, GRID - 1, GRID - 1, 4);
+      context.fill();
     });
   }
 
   // Method to handle game over state
-  gameOver() {
-    finalScoreElement.textContent = this.score; // Display the final score
-    clearInterval(gameLoop); // Stop the game loop
-    clearInterval(roundTimer); // Stop the round timer
-    deathScreen.style.display = "block"; // Show the death screen
-    canvas.style.display = "none"; // Hide the game canvas
+  gameOver(reason) {
+    // Clear all text effects
+    textEffects = [];
+    this.particles = [];
+    
+    const stats = this.getGameStats();
+    
+    // Safely update DOM elements with null checks
+    const safeUpdateElement = (id, value) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+        }
+    };
+
+    // Update basic stats
+    safeUpdateElement('finalScore', this.score.toFixed(2));
+    safeUpdateElement('accuracyRate', stats.accuracyRate.toFixed(1));
+    safeUpdateElement('longestStreak', stats.longestStreak);
+    
+    // Update detailed stats
+    safeUpdateElement('totalProblems', stats.totalProblems);
+    safeUpdateElement('correctAnswers', stats.correctAnswers);
+    safeUpdateElement('wrongAnswers', stats.wrongAnswers);
+    safeUpdateElement('avgResponseTime', (stats.averageResponseTime / 1000).toFixed(2));
+    
+    // Update operator stats
+    const operatorStatsDiv = document.getElementById('operatorStats');
+    if (operatorStatsDiv) {
+        operatorStatsDiv.innerHTML = '';
+        
+        Object.entries(stats.operatorPerformance).forEach(([op, avg]) => {
+            const card = document.createElement('div');
+            card.className = 'operator-card';
+            card.innerHTML = `
+                <div class="operator">${op}</div>
+                <div class="stat-value">${avg.toFixed(2)}</div>
+            `;
+            operatorStatsDiv.appendChild(card);
+        });
+    }
+    
+    // Show death screen and hide canvas
+    if (deathScreen) {
+        deathScreen.style.display = "block";
+    }
+    if (canvas) {
+        canvas.style.display = "none";
+    }
+    
+    // Display the reason for game over
+    safeUpdateElement('gameOverReason', `Game Over: ${reason}`);
+    
+    // Clear intervals
+    if (this.gameLoop) {
+        clearInterval(this.gameLoop);
+    }
+    if (this.roundTimer) {
+        clearInterval(this.roundTimer);
+    }
+    
+    // Log stats to console for debugging/research
+    console.log('Detailed Game Statistics:', stats);
+    
+    // Add event listener for download button
+    const downloadButton = document.getElementById('downloadStatsButton');
+    if (downloadButton) {
+        downloadButton.addEventListener('click', downloadGameStats);
+    }
+  }
+
+  calculateScore(timeRemaining, isCorrect) {
+    const baseScore = 1;
+    let finalScore = 0;
+    
+    // Time bonus multiplier (0.1 to 1.0)
+    const timeMultiplier = timeRemaining / ROUND_TIME;
+    
+    // Streak bonus (consecutive correct answers)
+    const streakBonus = this.currentStreak * 0.1; // 10% bonus per streak
+    
+    if (isCorrect) {
+      finalScore = baseScore * (1 + timeMultiplier + streakBonus);
+      this.currentStreak++;
+      this.totalCorrect++;
+      this.averageResponseTime.push(ROUND_TIME - timeRemaining);
+    } else {
+      finalScore = -0.25; // Penalty for wrong answers
+      this.currentStreak = 0;
+      this.totalWrong++;
+    }
+
+    // Update statistics
+    this.updateStats({
+      timeRemaining,
+      isCorrect,
+      finalScore
+    });
+
+    return finalScore;
+  }
+
+  updateStats(data) {
+    if (!this.gameStats) {
+      this.gameStats = {
+        totalProblems: 0,
+        correctAnswers: 0,
+        wrongAnswers: 0,
+        averageResponseTime: 0,
+        longestStreak: 0,
+        accuracyRate: 0,
+        timeEfficiency: 0,
+        problemDifficulty: [], // Track difficulty of each problem
+        responseTimesByDifficulty: {}, // Response times grouped by difficulty
+        scoresByOperator: {
+          '+': [],
+          '-': [],
+          '*': []
+        }
+      };
+    }
+
+    // Update statistics
+    this.gameStats.totalProblems++;
+    if (data.isCorrect) {
+      this.gameStats.correctAnswers++;
+      this.gameStats.longestStreak = Math.max(this.currentStreak, this.gameStats.longestStreak);
+    } else {
+      this.gameStats.wrongAnswers++;
+    }
+
+    // Calculate running averages
+    this.gameStats.accuracyRate = (this.gameStats.correctAnswers / this.gameStats.totalProblems) * 100;
+    this.gameStats.averageResponseTime = this.averageResponseTime.reduce((a, b) => a + b, 0) / this.averageResponseTime.length;
+    this.gameStats.timeEfficiency = (this.gameStats.averageResponseTime / ROUND_TIME) * 100;
+
+    // Store current problem's data
+    const currentProblem = mathProblem.getCurrentProblem();
+    this.gameStats.problemDifficulty.push({
+      difficulty: this.calculateProblemDifficulty(currentProblem),
+      responseTime: ROUND_TIME - data.timeRemaining,
+      isCorrect: data.isCorrect
+    });
+
+    // Store score by operator
+    this.gameStats.scoresByOperator[currentProblem.operator].push(data.finalScore);
+  }
+
+  calculateProblemDifficulty(problem) {
+    // Basic difficulty calculation based on numbers and operator
+    let difficulty = 1;
+    
+    // Larger numbers increase difficulty
+    difficulty += (problem.num1 + problem.num2) / 20;
+    
+    // Operator-based difficulty
+    switch (problem.operator) {
+      case '+': difficulty *= 1; break;
+      case '-': difficulty *= 1.2; break;
+      case '*': difficulty *= 1.5; break;
+    }
+    
+    return difficulty;
+  }
+
+  getGameStats() {
+    return {
+      ...this.gameStats,
+      finalScore: this.score,
+      // Additional analysis
+      operatorPerformance: {
+        '+': this.calculateOperatorAverage('+'),
+        '-': this.calculateOperatorAverage('-'),
+        '×': this.calculateOperatorAverage('*')
+      },
+      difficultyAnalysis: this.analyzeDifficultyLevels(),
+      speedProgression: this.analyzeSpeedProgression()
+    };
+  }
+
+  calculateOperatorAverage(operator) {
+    const scores = this.gameStats.scoresByOperator[operator];
+    return scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+  }
+
+  analyzeDifficultyLevels() {
+    // Group performance by difficulty levels
+    const difficultyGroups = {};
+    this.gameStats.problemDifficulty.forEach(problem => {
+      const difficultyLevel = Math.floor(problem.difficulty);
+      if (!difficultyGroups[difficultyLevel]) {
+        difficultyGroups[difficultyLevel] = {
+          total: 0,
+          correct: 0,
+          avgResponseTime: 0
+        };
+      }
+      difficultyGroups[difficultyLevel].total++;
+      if (problem.isCorrect) difficultyGroups[difficultyLevel].correct++;
+      difficultyGroups[difficultyLevel].avgResponseTime += problem.responseTime;
+    });
+
+    // Calculate averages for each difficulty level
+    Object.keys(difficultyGroups).forEach(level => {
+      const group = difficultyGroups[level];
+      group.accuracyRate = (group.correct / group.total) * 100;
+      group.avgResponseTime /= group.total;
+    });
+
+    return difficultyGroups;
+  }
+
+  analyzeSpeedProgression() {
+    // Analyze how response times change throughout the game
+    const chunkSize = 5; // Group every 5 problems
+    const chunks = [];
+    
+    for (let i = 0; i < this.averageResponseTime.length; i += chunkSize) {
+      const chunk = this.averageResponseTime.slice(i, i + chunkSize);
+      chunks.push({
+        problemRange: `${i + 1}-${Math.min(i + chunkSize, this.averageResponseTime.length)}`,
+        avgResponseTime: chunk.reduce((a, b) => a + b, 0) / chunk.length
+      });
+    }
+    
+    return chunks;
   }
 }
+
 
 // Functions //
 
 function getRandomPosition() {
   return {
-    x: getRandomInt(0, 25) * GRID,
-    y: getRandomInt(0, 25) * GRID,
+    x: getRandomInt(0, 24) * GRID,
+    y: getRandomInt(0, 24) * GRID,
   };
 }
 
@@ -226,7 +582,7 @@ function createAnswers() {
   answers = [];
   let positions = [];
 
-  while (positions.length < 3) {
+  while (positions.length < 50) {
     let pos = getRandomPosition();
     if (!positions.some((p) => p.x === pos.x && p.y === pos.y)) {
       positions.push(pos);
@@ -245,6 +601,49 @@ function createAnswers() {
   });
 }
 
+class TextEffect {
+  constructor(text, x, y, type = 'score') {
+    this.text = text;
+    this.x = x;
+    this.y = y - GRID;
+    this.alpha = 1.0;
+    this.scale = 1.0;
+    this.type = type;
+    this.dy = -1.5; // Consistent upward movement
+    this.color = text.includes('+') ? '#4CAF50' : '#cc4f4f';
+    this.fontSize = 20;
+  }
+
+  update() {
+    this.y += this.dy;
+    this.alpha -= 0.02; // Consistent fade out
+    this.scale += 0.01; // Smooth scaling
+  }
+
+  draw() {
+    context.save();
+    context.globalAlpha = this.alpha;
+    context.fillStyle = this.color;
+    context.font = `bold ${this.fontSize * this.scale}px Arial`;
+    context.textAlign = "center";
+    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    context.shadowBlur = 4;
+    context.shadowOffsetX = 2;
+    context.shadowOffsetY = 2;
+
+    context.fillText(this.text, this.x, this.y);
+    context.lineWidth = 2;
+    context.strokeStyle = 'white';
+    context.strokeText(this.text, this.x, this.y);
+
+    context.restore();
+  }
+
+  isVisible() {
+    return this.alpha > 0;
+  }
+}
+
 let textEffects = []; // Array to hold active text effects
 
 function checkAnswerCollision() {
@@ -254,36 +653,53 @@ function checkAnswerCollision() {
   for (let i = 0; i < answers.length; i++) {
     const answer = answers[i];
     if (head.x === answer.x && head.y === answer.y) {
-      if (answer.isCorrect) {
-        // Increase the snake's length by one segment
-        snake.maxCells++;
+      // Create particles
+      for (let j = 0; j < 15; j++) {
+        snake.particles.push(
+          new Particle(
+            head.x + GRID/2,
+            head.y + GRID/2,
+            answer.isCorrect ? '#4CAF50' : '#cc4f4f'
+          )
+        );
+      }
 
-        // Update the score
+      answers.splice(i, 1);
+      if (answer.isCorrect) {
+        const newScore = snake.calculateScore(snake.timeLeft, true);
+        snake.maxCells++;
         snake.score += SCORE_INCREMENT;
         scoreElement.textContent = snake.score;
-
-        // Clear any previous wrong answer message
         wrongAnswerElement.textContent = "";
 
-        // Add a floating text effect above the snake's head
-        textEffects.push(new TextEffect("+" + SCORE_INCREMENT, head.x + GRID / 2, head.y));
-        // Generate a new math problem and reposition answers
+        // Add score effect
+        textEffects.push(new TextEffect("+" + SCORE_INCREMENT, head.x + GRID / 2, head.y, 'score'));
+        
+        // Add combo effect if streak is notable
+        if (snake.currentStreak > 2) {
+          textEffects.push(new TextEffect(
+            `${snake.currentStreak}x COMBO!`, 
+            canvas.width / 2, 
+            canvas.height / 2, 
+            'combo'
+          ));
+        }
+
         mathProblem.generateNewProblem();
         createAnswers();
         return true;
       } else {
-        // Display wrong answer feedback
+        const newScore = snake.calculateScore(snake.timeLeft, false);
         wrongAnswerElement.textContent = "Wrong answer! Try again.";
         snake.score -= 0.25;
         scoreElement.textContent = snake.score;
 
-        textEffects.push(new TextEffect("-" + 0.25, head.x + GRID / 2, head.y));
+        // Add negative score effect
+        textEffects.push(new TextEffect("-0.25", head.x + GRID / 2, head.y, 'score'));
 
-        // Clear the wrong answer message after 2 seconds
         setTimeout(() => {
           wrongAnswerElement.textContent = "";
         }, 2000);
-
         return false;
       }
     }
@@ -292,34 +708,54 @@ function checkAnswerCollision() {
 }
 
 function update() {
-  context.clearRect(0, 0, canvas.width, canvas.height);
+    context.clearRect(0, 0, canvas.width, canvas.height);
 
-  snake.move();
-  checkAnswerCollision();
+    // Draw grid lines
+    context.strokeStyle = '#6e6e6e';
+    context.lineWidth = 0.5;
 
-  // Update and draw each text effect
-  textEffects = textEffects.filter((effect) => effect.isVisible());
-  textEffects.forEach((effect) => {
-    effect.update();
-    effect.draw();
-  });
+    // Vertical lines
+    for (let x = 0; x <= canvas.width; x += GRID) {
+        context.beginPath();
+        context.moveTo(x, 0);
+        context.lineTo(x, canvas.height);
+        context.stroke();
+    }
 
-  // Draw timer bar
-  const timerWidth = (timeLeft / ROUND_TIME) * canvas.width;
-  context.fillStyle = timeLeft < 2000 ? "red" : "#4CAF50";
-  context.fillRect(0, 0, timerWidth, 5);
+    // Horizontal lines
+    for (let y = 0; y <= canvas.height; y += GRID) {
+        context.beginPath();
+        context.moveTo(0, y);
+        context.lineTo(canvas.width, y);
+        context.stroke();
+    }
 
-  if (snake.checkCollision()) {
-    snake.gameOver();
-  }
-  answers.forEach((answer) => answer.draw());
-  snake.draw();
+    snake.move();
+    checkAnswerCollision();
+
+    textEffects = textEffects.filter((effect) => effect.isVisible());
+    textEffects.forEach((effect) => {
+        effect.update();
+        effect.draw();
+    });
+
+    // Draw timer bar
+    const timerWidth = (snake.timeLeft / ROUND_TIME) * canvas.width;
+    context.fillStyle = snake.timeLeft < 2000 ? "red" : "#4CAF50";
+    context.fillRect(0, 0, timerWidth, 5);
+
+    if (snake.checkCollision()) {
+        snake.gameOver();
+    }
+    answers.forEach((answer) => answer.draw());
+    snake.draw();
 }
 
 // Function Events //
 
+// Initialize objects but don't start timers
 const snake = new Snake();
-const mathProblem = new MathProblem();
+const mathProblem = new MathProblem(snake);
 
 let answers = [];
 
@@ -334,29 +770,80 @@ document.addEventListener("keydown", (e) => {
   } else if ((key === 39 || key === 68) && currentDir !== "left") {
     snake.nextDirection = "right";
   } else if ((key === 40 || key === 83) && currentDir !== "up") {
-    snake.nextDirection = "down";
+    snake.nextDirection = "down"; 
   }
 });
 
+document.addEventListener('keydown', (e) => {
+  const key = e.key.toLowerCase();
+  const keyMap = {
+      'w': '.up-key',
+      'a': '.left-key',
+      's': '.down-key',
+      'd': '.right-key'
+  };
+  
+  if (keyMap[key]) {
+      const keyElement = document.querySelector(keyMap[key]);
+      keyElement.classList.add('pressed');
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  const key = e.key.toLowerCase();
+  const keyMap = {
+      'w': '.up-key',
+      'a': '.left-key',
+      's': '.down-key',
+      'd': '.right-key'
+  };
+  
+  if (keyMap[key]) {
+      const keyElement = document.querySelector(keyMap[key]);
+      keyElement.classList.remove('pressed');
+  }
+});
+
+// where you update the score
+function updateScore(newScore) {
+  const scoreElement = document.getElementById('scoreValue');
+  scoreElement.textContent = newScore;
+  scoreElement.style.fontSize = '32px';
+  scoreElement.classList.add('score-up');
+  setTimeout(() => scoreElement.classList.remove('score-up'), 500);
+}
+
+// where you update the math question
+function updateMathQuestion(newQuestion) {
+  const questionElement = document.getElementById('mathQuestion');
+  questionElement.classList.add('question-change');
+  questionElement.textContent = newQuestion;
+  setTimeout(() => questionElement.classList.remove('question-change'), 300);
+}
+
+// where you show wrong answers
+function showWrongAnswer(message) {
+  const wrongAnswer = document.getElementById('wrongAnswer');
+  wrongAnswer.textContent = message;
+  wrongAnswer.classList.add('show');
+  setTimeout(() => wrongAnswer.classList.remove('show'), 2000);
+}
+
 function startGame() {
-  // Clear ALL existing intervals first
-  clearInterval(gameLoop);
-  clearInterval(roundTimer);
+  // Clear any existing intervals
+  if (snake.gameLoop) clearInterval(snake.gameLoop);
+  if (snake.roundTimer) clearInterval(snake.roundTimer);
   
   // Reset game state
+  snake.reset();
   canvas.style.display = "block";
-  createAnswers();
-  timeLeft = ROUND_TIME;
   
-  // Set up new timers
-  roundTimer = setInterval(() => {
-    timeLeft -= 100;
-    if (timeLeft <= 0) {
-      clearInterval(roundTimer);
-      snake.gameOver();
-    }
-  }, 100);
-  gameLoop = setInterval(update, GAME_SPEED);
+  // Initialize the first problem and timer
+  mathProblem.generateNewProblem();
+  createAnswers();
+  
+  // Start the game loop
+  snake.gameLoop = setInterval(update, GAME_SPEED);
 }
 
 startButton.addEventListener("click", () => {
@@ -366,11 +853,10 @@ startButton.addEventListener("click", () => {
 
 restartButton.addEventListener("click", () => {
   deathScreen.style.display = "none";
-  snake.reset();
-  mathProblem.generateNewProblem();
   startGame();
 });
 
+// Just show the start menu, don't initialize any game components
 startMenu.style.display = "block";
 
 ////////////////// Mobile Controls //////////////////
@@ -427,22 +913,23 @@ canvas.addEventListener('touchmove', function(e) {
     e.preventDefault();
 });
 
-// function resizeCanvas() {
-//   const maxSize = Math.min(window.innerWidth, window.innerHeight) - 20; // -20 for some padding
-//   const newSize = Math.floor(maxSize / GRID) * GRID; // Keep grid alignment
-  
-//   canvas.width = newSize;
-//   canvas.height = newSize;
-  
-//   // Recenter the snake if needed
-//   if (snake) {
-//       snake.x = Math.floor(canvas.width / 2 / GRID) * GRID;
-//       snake.y = Math.floor(canvas.height / 2 / GRID) * GRID;
-//   }
-// }
-
-// // Add event listener for resize
-// window.addEventListener('resize', resizeCanvas);
-
-// // Call once at start
-// resizeCanvas();
+function downloadGameStats() {
+    const stats = snake.getGameStats();
+    const dataStr = JSON.stringify(stats, null, 2);
+    const blob = new Blob([dataStr], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    
+    // Create download link
+    const a = document.createElement('a');
+    const date = new Date().toISOString().split('T')[0];
+    a.setAttribute('download', `math-snake-stats-${date}.txt`);
+    a.setAttribute('href', url);
+    a.style.display = 'none';
+    
+    document.body.appendChild(a);
+    a.click();
+    
+    // Cleanup
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}

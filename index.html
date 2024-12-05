@@ -3,36 +3,66 @@
 <head>
   <title>Snake Game</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
   <div class="menu" id="startMenu">
-    <h1>Basic Arithmetic Snake Game (v1.2.1)</h1>
+    <h1>Basic Arithmetic Snake Game (v1.6.0)</h1>
     <button id="startButton">Start Game</button>
   </div>
 
   <div class="death-screen" id="deathScreen">
     <h1>Game Over!</h1>
-    <p>Your score: <span id="finalScore">0</span></p>
+    <div class="stats-container">
+        <div class="basic-stats">
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <p>Accuracy: <span id="accuracyRate">0</span>%</p>
+            <p>Longest Streak: <span id="longestStreak">0</span></p>
+        </div>
+        
+        <div class="detailed-stats">
+            <h3>Performance by Operation</h3>
+            <div id="operatorStats"></div>
+            
+            <h3>Speed Analysis</h3>
+            <p>Average Response Time: <span id="avgResponseTime">0</span>s</p>
+            
+            <div class="problems-summary">
+                <p>Total Problems: <span id="totalProblems">0</span></p>
+                <p>Correct Answers: <span id="correctAnswers">0</span></p>
+                <p>Wrong Answers: <span id="wrongAnswers">0</span></p>
+            </div>
+        </div>
+    </div>
+    <button id="downloadStatsButton" class="button">Download Statistics</button>
     <button id="restartButton">Restart</button>
   </div>
 
   <div class="game-info">
-    <div class="question" id="mathQuestion">2 + 2 = 22</div>
-    <div class="score">Score: <span id="scoreValue">0</span></div>
-    <div class="wrong-answer" id="wrongAnswer"></div>
+    <div class="question animate__animated" id="mathQuestion">2 + 2 = 22</div>
+    <div class="score">Score: <span id="scoreValue" class="animate__animated">0</span></div>
+    <div class="wrong-answer animate__animated" id="wrongAnswer"></div>
   </div>
 
   <div class="controls">
-    <h1>Use WASD to move the snake.</h1>
-    <img src="controls_ui/W.png" alt="W key" class="control-key up-key">
-    <div class="middle-row">
-      <img src="controls_ui/A.png" alt="A key" class="control-key left-key">
-      <img src="controls_ui/S.png" alt="S key" class="control-key down-key">
-      <img src="controls_ui/D.png" alt="D key" class="control-key right-key">
+    <div class="desktop-controls">
+      <h2>Use WASD to move</h2>
+      <div class="wasd-layout">
+        <img src="controls_ui/W.png" alt="W key" class="control-key up-key animate__animated">
+        <div class="middle-row">
+          <img src="controls_ui/A.png" alt="A key" class="control-key left-key animate__animated">
+          <img src="controls_ui/S.png" alt="S key" class="control-key down-key animate__animated">
+          <img src="controls_ui/D.png" alt="D key" class="control-key right-key animate__animated">
+        </div>
+      </div>
     </div>
   </div>
 
-  <canvas width="400" height="400" id="game"></canvas>
+  <canvas width="800" height="800" id="game"></canvas>
   <script src="main.js"></script>
+  <a href="https://github.com/azza0001/new-snakeGame" target="_blank" class="github-link">
+    <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub">
+  </a>
 </body>
 </html>
