@@ -325,3 +325,49 @@ canvas {
     display: none;
   }
 }
+
+#combo-display {
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    color: #FFD700;
+    font-size: 20px;
+    font-weight: bold;
+    display: none;
+}
+
+.combo-text {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    border-radius: 5px;
+    z-index: 1000;
+    animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
+}
+
+.notification.success {
+    background: #4CAF50;
+    color: white;
+}
+
+.notification.error {
+    background: #f44336;
+    color: white;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}

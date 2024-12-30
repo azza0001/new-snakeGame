@@ -25,6 +25,8 @@ class MathProblem {
   constructor(snake) {
     this.snake = snake;
     this.operators = ["+", "-", "*"];
+    // Initialize an array to store response times
+    this.responseTimes = [];
   }
 
   generateNewProblem() {
@@ -32,6 +34,9 @@ class MathProblem {
     if (this.snake.roundTimer) {
       clearInterval(this.snake.roundTimer);
     }
+
+    // Record the start time when a new problem is generated
+    this.startTime = Date.now();
 
     const score = parseInt(scoreElement.textContent);
     const maxNum = Math.min(12, Math.max(5, Math.floor(score / 50) + 5));
@@ -100,6 +105,24 @@ class MathProblem {
       operator: this.operator,
       answer: this.answer
     };
+  }
+
+  // Function to handle player's answer
+  handleAnswer(playerAnswer) {
+    // Record the end time when the player answers
+    const endTime = Date.now();
+    // Calculate the response time
+    const responseTime = endTime - this.startTime;
+    // Add the response time to the array
+    this.responseTimes.push(responseTime);
+
+    // Calculate the average response time
+    const totalResponseTime = this.responseTimes.reduce((acc, time) => acc + time, 0);
+    const averageResponseTime = totalResponseTime / this.responseTimes.length;
+
+    console.log(`Average Response Time: ${averageResponseTime} ms`);
+
+    // ...existing code to handle the answer...
   }
 }
 
@@ -564,6 +587,141 @@ class Snake {
   }
 }
 
+class Game {
+    constructor() {
+        // ...existing code...
+        this.combo = 0;
+        this.comboTimer = null;
+        this.comboTimeout = 5000; // 5 seconds to maintain combo
+        this.maxCombo = 10; // Maximum combo multiplier
+    }
+
+    handleCorrectAnswer() {
+        // ...existing code...
+        this.increaseCombo();
+        this.calculateComboScore();
+        this.showComboEffect();
+    }
+
+    handleWrongAnswer() {
+        // ...existing code...
+        this.resetCombo();
+    }
+
+    increaseCombo() {
+        clearTimeout(this.comboTimer);
+        this.combo = Math.min(this.combo + 1, this.maxCombo);
+        this.startComboTimer();
+    }
+
+    resetCombo() {
+        clearTimeout(this.comboTimer);
+        this.combo = 0;
+        this.updateComboDisplay();
+    }
+
+    startComboTimer() {
+        this.comboTimer = setTimeout(() => {
+            this.resetCombo();
+        }, this.comboTimeout);
+        this.updateComboDisplay();
+    }
+
+    calculateComboScore() {
+        const baseScore = 10;
+        const comboBonus = this.combo * 5;
+        return baseScore + comboBonus;
+    }
+
+    showComboEffect() {
+        if (this.combo > 1) {
+            const comboText = document.createElement('div');
+            comboText.className = 'combo-text';
+            comboText.textContent = `${this.combo}x Combo!`;
+            Object.assign(comboText.style, {
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                color: '#FFD700',
+                fontSize: '24px',
+                fontWeight: 'bold',
+                opacity: '1',
+                transition: 'all 0.5s',
+                pointerEvents: 'none',
+                zIndex: '1000'
+            });
+
+            document.body.appendChild(comboText);
+
+            requestAnimationFrame(() => {
+                comboText.style.transform = 'translate(-50%, -100px)';
+                comboText.style.opacity = '0';
+            });
+
+            setTimeout(() => {
+                document.body.removeChild(comboText);
+            }, 500);
+        }
+    }
+
+    updateComboDisplay() {
+        const comboDisplay = document.getElementById('combo-display');
+        if (this.combo > 1) {
+            comboDisplay.textContent = `Combo: x${this.combo}`;
+            comboDisplay.style.display = 'block';
+        } else {
+            comboDisplay.style.display = 'none';
+        }
+    }
+}
+
+class GameStatsFormatter {
+    constructor(stats) {
+        this.stats = stats;
+    }
+
+    formatDate(isoDate) {
+        return new Date(isoDate).toLocaleString();
+    }
+
+    toJSON() {
+        return {
+            "Game Summary": {
+                "Date": this.formatDate(new Date()),
+                "Total Score": this.stats.score,
+                "Highest Combo": this.stats.maxCombo,
+                "Questions Answered": this.stats.totalQuestions,
+                "Accuracy": `${Math.round((this.stats.correctAnswers / this.stats.totalQuestions) * 100)}%`
+            },
+            "Performance": {
+                "Correct Answers": this.stats.correctAnswers,
+                "Wrong Answers": this.stats.wrongAnswers,
+                "Average Response Time": `${Math.round(this.stats.avgResponseTime)}ms`,
+                "Best Response Time": `${Math.round(this.stats.bestResponseTime)}ms`
+            },
+            "Snake Stats": {
+                "Final Length": this.stats.snakeLength,
+                "Food Eaten": this.stats.foodEaten,
+                "Time Played": `${Math.round(this.stats.timePlayed / 1000)}s`
+            }
+        };
+    }
+
+    toCSV() {
+        const data = this.toJSON();
+        let csv = [];
+        
+        Object.entries(data).forEach(([category, stats]) => {
+            csv.push(`\n${category}`);
+            Object.entries(stats).forEach(([key, value]) => {
+                csv.push(`${key},${value}`);
+            });
+        });
+        
+        return csv.join('\n');
+    }
+}
 
 // Functions //
 
@@ -609,18 +767,34 @@ class TextEffect {
     this.alpha = 1.0;
     this.scale = 1.0;
     this.type = type;
-    this.dy = -1.5; // Consistent upward movement
+    this.dy = -1.5;
     this.color = text.includes('+') ? '#4CAF50' : '#cc4f4f';
     this.fontSize = 20;
+    this.startTime = performance.now();
+    this.duration = 1000; // 1 second duration
+    this.isActive = true;
   }
 
   update() {
-    this.y += this.dy;
-    this.alpha -= 0.02; // Consistent fade out
-    this.scale += 0.01; // Smooth scaling
+    const currentTime = performance.now();
+    const elapsed = currentTime - this.startTime;
+    const progress = Math.min(elapsed / this.duration, 1);
+    
+    // Smooth easing function
+    const easeOut = t => 1 - Math.pow(1 - t, 3);
+    
+    this.y += this.dy * (1 - progress);
+    this.alpha = 1 - easeOut(progress);
+    this.scale = 1 + (progress * 0.2);
+
+    if (progress >= 1) {
+      this.isActive = false;
+    }
   }
 
   draw() {
+    if (!this.isActive) return;
+    
     context.save();
     context.globalAlpha = this.alpha;
     context.fillStyle = this.color;
@@ -630,17 +804,8 @@ class TextEffect {
     context.shadowBlur = 4;
     context.shadowOffsetX = 2;
     context.shadowOffsetY = 2;
-
     context.fillText(this.text, this.x, this.y);
-    context.lineWidth = 2;
-    context.strokeStyle = 'white';
-    context.strokeText(this.text, this.x, this.y);
-
     context.restore();
-  }
-
-  isVisible() {
-    return this.alpha > 0;
   }
 }
 
@@ -733,7 +898,7 @@ function update() {
     snake.move();
     checkAnswerCollision();
 
-    textEffects = textEffects.filter((effect) => effect.isVisible());
+    textEffects = textEffects.filter((effect) => effect.isActive);
     textEffects.forEach((effect) => {
         effect.update();
         effect.draw();
@@ -913,23 +1078,99 @@ canvas.addEventListener('touchmove', function(e) {
     e.preventDefault();
 });
 
-function downloadGameStats() {
-    const stats = snake.getGameStats();
-    const dataStr = JSON.stringify(stats, null, 2);
-    const blob = new Blob([dataStr], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
+// Touch control configuration
+const TOUCH_CONFIG = {
+    minSwipeDistance: 30,
+    debounceTime: 100,
+    sensitivity: 1.0
+};
+
+let lastTouchTime = 0;
+
+canvas.addEventListener('touchstart', (e) => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    e.preventDefault();
+});
+
+canvas.addEventListener('touchmove', (e) => {
+    if (!touchStartX || !touchStartY) return;
+
+    const currentTime = Date.now();
+    if (currentTime - lastTouchTime < TOUCH_CONFIG.debounceTime) return;
+
+    const deltaX = (e.touches[0].clientX - touchStartX) * TOUCH_CONFIG.sensitivity;
+    const deltaY = (e.touches[0].clientY - touchStartY) * TOUCH_CONFIG.sensitivity;
+    const currentDir = snake.direction;
+
+    if (Math.abs(deltaX) < TOUCH_CONFIG.minSwipeDistance && 
+        Math.abs(deltaY) < TOUCH_CONFIG.minSwipeDistance) return;
+
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        if (deltaX > 0 && currentDir !== "left") {
+            snake.nextDirection = "right";
+        } else if (deltaX < 0 && currentDir !== "right") {
+            snake.nextDirection = "left";
+        }
+    } else {
+        if (deltaY > 0 && currentDir !== "up") {
+            snake.nextDirection = "down";
+        } else if (deltaY < 0 && currentDir !== "down") {
+            snake.nextDirection = "up";
+        }
+    }
+
+    lastTouchTime = currentTime;
+    touchStartX = null;
+    touchStartY = null;
+    e.preventDefault();
+});
+
+async function downloadGameStats() {
+    try {
+        const formatter = new GameStatsFormatter(snake.getGameStats());
+        const format = 'json'; // or 'csv'
+        
+        let blob, filename, contentType;
+        
+        if (format === 'json') {
+            const data = JSON.stringify(formatter.toJSON(), null, 2);
+            contentType = 'application/json';
+            filename = 'math-snake-stats.json';
+            blob = new Blob([data], { type: contentType });
+        } else {
+            const data = formatter.toCSV();
+            contentType = 'text/csv';
+            filename = 'math-snake-stats.csv';
+            blob = new Blob([data], { type: contentType });
+        }
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.setAttribute('download', filename);
+        a.setAttribute('href', url);
+        a.style.display = 'none';
+        
+        document.body.appendChild(a);
+        await a.click();
+        
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showNotification('Statistics downloaded successfully!');
+    } catch (error) {
+        console.error('Failed to download stats:', error);
+        showNotification('Failed to download statistics', 'error');
+    }
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
     
-    // Create download link
-    const a = document.createElement('a');
-    const date = new Date().toISOString().split('T')[0];
-    a.setAttribute('download', `math-snake-stats-${date}.txt`);
-    a.setAttribute('href', url);
-    a.style.display = 'none';
-    
-    document.body.appendChild(a);
-    a.click();
-    
-    // Cleanup
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
 }
