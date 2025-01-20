@@ -21,6 +21,7 @@ Our primary research goal is to study the difference in performance between play
  - Marckus Polintan
  - Jared Carreon
  - Nate Ross
+ - Ivo Famentera
  - Azriel Caña
 
 ## Maintainer/Developer
