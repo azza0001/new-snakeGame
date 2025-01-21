@@ -5,10 +5,11 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="menu" id="startMenu">
-    <h1>Basic Arithmetic Snake Game (v1.6.0)</h1>
+    <h1>Basic Arithmetic Snake Game (v1.7.0)</h1>
     <button id="startButton">Start Game</button>
   </div>
 
@@ -35,7 +36,6 @@
             </div>
         </div>
     </div>
-    <button id="downloadStatsButton" class="button">Download Statistics</button>
     <button id="restartButton">Restart</button>
   </div>
 
@@ -61,6 +61,10 @@
   </div>
 
   <canvas width="800" height="800" id="game"></canvas>
+  <div id="throbber" class="throbber" style="display: none;">
+    <div class="spinner"></div>
+    <div class="throbber-text">Calculating your stats...</div>
+  </div>
   <script src="main.js"></script>
   <a href="https://github.com/azza0001/new-snakeGame" target="_blank" class="github-link">
     <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub">
