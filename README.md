@@ -4,8 +4,11 @@ Made with:
 [![CSS](https://img.shields.io/badge/CSS-1572B6?logo=css3&logoColor=fff)](#)
 [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=000)](#)
 
-# Play Here
+# Play Here:
 * [Game Demo](https://azza0001.github.io/new-snakeGame/)
+
+# Pre-Test Game:
+* [Mental Math Quiz Test](https://github.com/azza0001/pre-test_snakeGame)
 
 # Basic Arithmetic Skills | Snake Game Edition
 
