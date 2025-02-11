@@ -435,3 +435,50 @@ canvas {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+.input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.player-input {
+    padding: 12px;
+    border: 2px solid #4a4945;
+    border-radius: 5px;
+    background: #272623;
+    color: #e5e5e2;
+    font-family: 'Jost', sans-serif;
+    font-size: 16px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.player-input:focus {
+    outline: none;
+    border-color: #b8b5a9;
+}
+
+.player-input::placeholder {
+    color: #888;
+}
+
+.player-input:invalid {
+    border-color: #ff4444;
+}
+
+.error-message {
+    font-size: 14px;
+    margin-top: 10px;
+    color: #ff4444;
+}
+
+select.player-input {
+    cursor: pointer;
+}
+
+select.player-input option {
+    background: #272623;
+    color: #e5e5e2;
+}

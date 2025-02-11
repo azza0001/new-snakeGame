@@ -10,7 +10,27 @@
 <body>
   <div class="menu" id="startMenu">
     <h1>Basic Arithmetic Snake Game (v1.7.0)</h1>
+    <div class="input-container">
+        <input 
+            type="text" 
+            id="playerName" 
+            placeholder="Enter your Full Name" 
+            required
+            class="player-input"
+        >
+        <input 
+            type="text" 
+            id="playerSection" 
+            placeholder="Enter your Section" 
+            required
+            class="player-input"
+            maxlength="10"
+        >
+    </div>
     <button id="startButton">Start Game</button>
+    <p class="error-message" id="inputError" style="display: none;">
+        Please enter your name and section before starting
+    </p>
   </div>
 
   <div class="death-screen" id="deathScreen">
